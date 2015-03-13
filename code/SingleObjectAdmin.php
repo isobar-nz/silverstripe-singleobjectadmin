@@ -44,8 +44,14 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
 
         $object = $objectClass::get()->first();
         if (!$object || !$object->exists()) {
+            $currentStage = Versioned::current_stage();
+            Versioned::reading_stage('Stage');
             $object = $objectClass::create();
             $object->write();
+            if ($objectClass::has_extension('Versioned')) {
+                $object->doPublish();
+            }
+            Versioned::reading_stage($currentStage);
         }
         $fields = $object->getCMSFields();
 
