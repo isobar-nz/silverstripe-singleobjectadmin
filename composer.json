@@ -1,0 +1,14 @@
+{
+    "name": "littlegiant/silverstripe-singleobjectadmin",
+    "type": "silverstripe-module",
+    "description": "Single object administration via a LeftAndMain like interface",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Stevie Mayhew",
+            "email": "stevie@stevie.co.nz",
+            "role": "Developer"
+        }
+    ],
+    "minimum-stability": "dev"
+}
