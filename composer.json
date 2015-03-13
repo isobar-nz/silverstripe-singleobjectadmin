@@ -8,7 +8,11 @@
             "name": "Stevie Mayhew",
             "email": "stevie@stevie.co.nz",
             "role": "Developer"
+        },
+        {
+            "name": "Jeremy Bridson",
+            "email": "jeremy.bridson@littlegiant.co.nz",
+            "role": "Developer"
         }
-    ],
-    "minimum-stability": "dev"
+    ]
 }
