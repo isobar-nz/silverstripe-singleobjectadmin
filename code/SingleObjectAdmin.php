@@ -55,6 +55,8 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
         }
         $fields = $object->getCMSFields();
 
+        $fields->push(HiddenField::create('ID', 'ID', $object->ID));
+
         $fields->push($navField = new LiteralField('SilverStripeNavigator', $this->getSilverStripeNavigator()));
         $navField->setAllowHTML(true);
 
@@ -136,7 +138,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
     public function doSave($data, $form)
     {
         $objectClass = $this->config()->get('tree_class');
-        $object = $objectClass::get()->first();
+        $object = $objectClass::get()->byID($data['ID']);
 
         $currentStage = Versioned::current_stage();
         Versioned::reading_stage('Stage');
@@ -222,7 +224,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
 
         $objectClass = $this->config()->get('tree_class');
 
-        $object = $objectClass::get()->first();
+        $object = $objectClass::get()->byID($data['ID']);
 
         if ($object) {
             $object->doPublish();
