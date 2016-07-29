@@ -174,12 +174,12 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
             }
         }
 
-        $link = '"' . $object->singular_name() . '"';
+        $link = '"' . $object->i18n_singular_name() . '"';
         $message = _t(
             'GridFieldDetailForm.Saved',
             'Saved {name} {link}',
             array(
-                'name' => $object->singular_name(),
+                'name' => $object->i18n_singular_name(),
                 'link' => $link
             )
         );
@@ -228,7 +228,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
 
         if ($object) {
             $object->doPublish();
-            $form->sessionMessage($object->singular_name() . ' has been saved.', 'good');
+            $form->sessionMessage($object->i18n_singular_name() . ' has been saved.', 'good');
         } else {
             $form->sessionMessage('Something failed, please refresh your browser.', 'bad');
         }
