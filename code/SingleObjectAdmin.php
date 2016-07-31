@@ -180,7 +180,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
             'Saved {name} {link}',
             array(
                 'name' => $object->i18n_singular_name(),
-                'link' => $link
+                'link' => ''
             )
         );
 
