@@ -1,5 +1,23 @@
 <?php
 
+namespace LittleGiant\SingleObjectAdmin;
+
+use SilverStripe\Forms\Form;
+use SilverStripe\Admin\AdminRootController;
+use SilverStripe\Security\Permission;
+use SilverStripe\Versioned\Versioned;
+use SilverStripe\Forms\HiddenField;
+use SilverStripe\CMS\Controllers\SilverStripeNavigator;
+use SilverStripe\Forms\LiteralField;
+use SilverStripe\Forms\FieldList;
+use SilverStripe\Forms\FormAction;
+use SilverStripe\Control\Controller;
+use SilverStripe\Control\PjaxResponseNegotiator;
+use SilverStripe\ORM\ValidationException;
+use SilverStripe\Admin\LeftAndMain;
+use SilverStripe\Security\PermissionProvider;
+
+
 /**
  * Defines the Single Object Administration interface for the CMS
  *
@@ -34,55 +52,111 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
     }
 
     /**
+     * @return mixed
+     */
+    public function getCurrentObject() {
+        $objectClass = $this->config()->get('tree_class');
+        $object = $objectClass::get()->first();
+
+        if ($object && $object->exists()) {
+            return $object;
+        }
+
+        $currentStage = Versioned::get_stage();
+        Versioned::set_stage('Stage');
+
+        $object = $objectClass::create();
+        $object->write();
+        if ($objectClass::has_extension(Versioned::class)) {
+            $object->doPublish();
+        }
+
+        Versioned::set_stage($currentStage);
+
+        return $object;
+    }
+
+
+    public function getCMSActions() {
+
+        $actions = new FieldList(
+            FormAction::create(
+                'doSave',
+                'Save'
+            )->addExtraClass('btn-primary font-ic1on-save')
+        );
+
+        $this->extend('updateCMSActions', $actions);
+
+        return $actions;
+    }
+
+    /**
      * @param null $id Not used.
      * @param null $fields Not used.
      * @return Form
      */
     public function getEditForm($id = null, $fields = null)
     {
-        $objectClass = $this->config()->get('tree_class');
 
-        $object = $objectClass::get()->first();
-        if (!$object || !$object->exists()) {
-            $currentStage = Versioned::current_stage();
-            Versioned::reading_stage('Stage');
-            $object = $objectClass::create();
-            $object->write();
-            if ($objectClass::has_extension('Versioned')) {
-                $object->doPublish();
-            }
-            Versioned::reading_stage($currentStage);
-        }
+        $object = $this->getCurrentObject();
+
         $fields = $object->getCMSFields();
 
         $fields->push(HiddenField::create('ID', 'ID', $object->ID));
-
-        $fields->push($navField = new LiteralField('SilverStripeNavigator', $this->getSilverStripeNavigator()));
+        $fields->push($navField = new LiteralField(SilverStripeNavigator::class, $this->getSilverStripeNavigator()));
         $navField->setAllowHTML(true);
 
-        $actions = new FieldList();
-        $actions->push(
-            FormAction::create('doSave', 'Save')
-                ->setUseButtonTag(true)
-                ->addExtraClass('ss-ui-action-constructive')
-                ->setAttribute('data-icon', 'accept')
-        );
-        $form = CMSForm::create(
-            $this, 'EditForm', $fields, $actions
+        $actions = $this->getCMSActions();
+        $negotiator = $this->getResponseNegotiator();
+
+        // Retrieve validator, if one has been setup
+        if ($object->hasMethod("getCMSValidator")) {
+            $validator = $object->getCMSValidator();
+        } else {
+            $validator = null;
+        }
+
+        $form = Form::create(
+            $this,
+            'EditForm',
+            $fields,
+            $actions,
+            $validator
         )->setHTMLID('Form_EditForm');
-        $form->setResponseNegotiator($this->getResponseNegotiator());
-        $form->addExtraClass('cms-content center cms-edit-form');
-        if ($form->Fields()->hasTabset()) $form->Fields()->findOrMakeTab('Root')->setTemplate('CMSTabSet');
-        $form->setHTMLID('Form_EditForm');
+
+        $form->setValidationResponseCallback(function (ValidationResult $errors) use ($negotiator, $form) {
+            $request = $this->getRequest();
+            if ($request->isAjax() && $negotiator) {
+                $result = $form->forTemplate();
+                return $negotiator->respond($request, array(
+                    'CurrentForm' => function () use ($result) {
+                        return $result;
+                    }
+                ));
+            }
+        });
+
+        $form->addExtraClass('flexbox-area-grow fill-height cms-content cms-edit-form');
+        $form->setAttribute('data-pjax-fragment', 'CurrentForm');
+
+        if ($form->Fields()->hasTabSet()) {
+            $form->Fields()->findOrMakeTab('Root')->setTemplate('SilverStripe\\Forms\\CMSTabSet');
+        }
+
         $form->loadDataFrom($object);
         $form->setTemplate($this->getTemplatesWithSuffix('_EditForm'));
 
         // Use <button> to allow full jQuery UI styling
         $actions = $actions->dataFields();
-        if ($actions) foreach ($actions as $action) $action->setUseButtonTag(true);
+        if ($actions) {
+            /** @var FormAction $action */
+            foreach ($actions as $action) {
+                $action->setUseButtonTag(true);
+            }
+        }
 
         $this->extend('updateEditForm', $form);
-
         return $form;
 
     }
@@ -99,7 +173,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
      */
     public function getSilverStripeNavigator()
     {
-        return $this->renderWith('SingleObjectAdmin_SilverStripeNavigator');
+        return $this->renderWith(SingleObjectAdmin::class . '_SilverStripeNavigator');
     }
 
     /**
@@ -110,24 +184,9 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
         $neg = parent::getResponseNegotiator();
         $controller = $this;
         $neg->setCallback('CurrentForm', function () use (&$controller) {
-            return $controller->renderWith($controller->getTemplatesWithSuffix('_Content'));
+            return $controller->renderWith(SingleObjectAdmin::class . '_Content');
         });
         return $neg;
-    }
-
-    /**
-     * @return FieldList
-     */
-    public function getCMSActions()
-    {
-        $actions = new FieldList();
-        $actions->push(
-            FormAction::create('save_siteconfig', _t('CMSMain.SAVE', 'Save'))
-                ->addExtraClass('ss-ui-action-constructive')->setAttribute('data-icon', 'accept')
-        );
-        $this->extend('updateCMSActions', $actions);
-
-        return $actions;
     }
 
     /**
@@ -140,8 +199,8 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
         $objectClass = $this->config()->get('tree_class');
         $object = $objectClass::get()->byID($data['ID']);
 
-        $currentStage = Versioned::current_stage();
-        Versioned::reading_stage('Stage');
+        $currentStage = Versioned::get_stage();
+        Versioned::set_stage('Stage');
 
         $controller = Controller::curr();
         if (!$object->canEdit()) {
@@ -167,8 +226,8 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
             return $responseNegotiator->respond($controller->getRequest());
         }
 
-        Versioned::reading_stage($currentStage);
-        if ($objectClass::has_extension('Versioned')) {
+        Versioned::set_stage($currentStage);
+        if ($objectClass::has_extension(Versioned::class)) {
             if ($object->isPublished()) {
                 $this->publish($data, $form);
             }
@@ -202,7 +261,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
         $return = $this->customise(array(
             'Backlink' => $controller->hasMethod('Backlink') ? $controller->Backlink() : $controller->Link(),
             'EditForm' => $form,
-        ))->renderWith('SingleObjectAdmin_Content');
+        ))->renderWith(SingleObjectAdmin::class . '_Content');
 
         if ($request->isAjax()) {
             return $return;
@@ -219,8 +278,8 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
      */
     private function publish($data, $form)
     {
-        $currentStage = Versioned::current_stage();
-        Versioned::reading_stage('Stage');
+        $currentStage = Versioned::get_stage();
+        Versioned::set_stage('Stage');
 
         $objectClass = $this->config()->get('tree_class');
 
@@ -233,7 +292,37 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
             $form->sessionMessage('Something failed, please refresh your browser.', 'bad');
         }
 
-        Versioned::reading_stage($currentStage);
+        Versioned::set_stage($currentStage);
+    }
+
+
+    /**
+     * Overridden to avoid the BadMethodCallException exception when a url_segment is undefined
+     *
+     * @param string $action
+     * @return string
+     */
+    public function Link($action = null)
+    {
+        // LeftAndMain methods have a top-level uri access
+        if (static::class === SingleObjectAdmin::class) {
+            $segment = '';
+        } else {
+            // Get url_segment
+            $segment = $this->config()->get('url_segment');
+            if (!$segment) {
+                throw new BadMethodCallException("SingleObjectAdmin subclasses must have url_segment");
+            }
+        }
+
+        $link = Controller::join_links(
+            AdminRootController::admin_url(),
+            $segment,
+            '/', // trailing slash needed if $action is null!
+            "$action"
+        );
+        $this->extend('updateLink', $link);
+        return $link;
     }
 
 }

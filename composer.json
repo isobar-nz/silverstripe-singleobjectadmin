@@ -14,5 +14,9 @@
             "email": "jeremy.bridson@littlegiant.co.nz",
             "role": "Developer"
         }
-    ]
+    ],
+    "require":
+    {
+        "silverstripe/framework": "^4.0"
+    }
 }
