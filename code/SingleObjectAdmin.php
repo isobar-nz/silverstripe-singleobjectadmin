@@ -211,7 +211,9 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
             $form->saveInto($object);
             $object->write();
         } catch (ValidationException $e) {
-            $form->sessionMessage($e->getResult()->message(), 'bad');
+            $result = $e->getResult();
+            $form->loadMessagesFrom($result);
+
             $responseNegotiator = new PjaxResponseNegotiator(array(
                 'CurrentForm' => function () use (&$form) {
                     return $form->forTemplate();
