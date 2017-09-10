@@ -20,6 +20,7 @@ $ composer require littlegiant/silverstripe-singleobjectadmin
 Simply extend the SingleObjectAdmin class instead of ModelAdmin and include the class via the `tree_class` static.
 
 ```php
+use LittleGiant\SingleObjectAdmin\SingleObjectAdmin;
 
 class ProductSettingsAdmin extends SingleObjectAdmin
 {
