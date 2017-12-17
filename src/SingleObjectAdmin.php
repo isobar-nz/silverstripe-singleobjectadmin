@@ -2,8 +2,12 @@
 
 namespace LittleGiant\SingleObjectAdmin;
 
+use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Forms\Form;
 use SilverStripe\Admin\AdminRootController;
+use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\FieldType\DBHTMLText;
+use SilverStripe\ORM\ValidationResult;
 use SilverStripe\Security\Permission;
 use SilverStripe\Versioned\Versioned;
 use SilverStripe\Forms\HiddenField;
@@ -17,22 +21,20 @@ use SilverStripe\ORM\ValidationException;
 use SilverStripe\Admin\LeftAndMain;
 use SilverStripe\Security\PermissionProvider;
 
-
 /**
  * Defines the Single Object Administration interface for the CMS
  *
  * @package SingleObjectAdmin
- * @author Jeremy Bridson with help from Stevie Mayhew
+ * @author  Jeremy Bridson with help from Stevie Mayhew
  */
 class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
 {
-
     private static $url_rule = '/$Action/$ID/$OtherID';
-    private static $menu_icon = 'silverstripe-singleobjectadmin/images/singleobjectadmin.png';
+    private static $menu_icon = 'resources/littlegiant/silverstripe-singleobjectadmin/dist/images/singleobjectadmin.png';
 
-    private static $allowed_actions = array(
+    private static $allowed_actions = [
         'EditForm'
-    );
+    ];
 
     public function canView($member = null)
     {
@@ -41,21 +43,23 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
 
     public function providePermissions()
     {
-
-        return array(
-            "CMS_ACCESS_SingleObjectAdmin" => array(
-                'name' => "Access to Single Object Administration",
+        return [
+            "CMS_ACCESS_SingleObjectAdmin" => [
+                'name'     => "Access to Single Object Administration",
                 'category' => 'CMS Access',
-                'help' => 'Allow use of Single Object Administration'
-            )
-        );
+                'help'     => 'Allow use of Single Object Administration'
+            ]
+        ];
     }
 
     /**
-     * @return mixed
+     * @return DataObject
      */
-    public function getCurrentObject() {
+    public function getCurrentObject()
+    {
         $objectClass = $this->config()->get('tree_class');
+
+        /** @var DataObject|Versioned $object */
         $object = $objectClass::get()->first();
 
         if ($object && $object->exists()) {
@@ -68,7 +72,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
         $object = $objectClass::create();
         $object->write();
         if ($objectClass::has_extension(Versioned::class)) {
-            $object->doPublish();
+            $object->publishRecursive();
         }
 
         Versioned::set_stage($currentStage);
@@ -76,15 +80,12 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
         return $object;
     }
 
-
-    public function getCMSActions() {
-
-        $actions = new FieldList(
-            FormAction::create(
-                'doSave',
-                'Save'
-            )->addExtraClass('btn-primary font-ic1on-save')
-        );
+    /**
+     * @return FieldList
+     */
+    public function getCMSActions()
+    {
+        $actions = new FieldList(FormAction::create('doSave', 'Save')->addExtraClass('btn-primary font-ic1on-save'));
 
         $this->extend('updateCMSActions', $actions);
 
@@ -92,13 +93,13 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
     }
 
     /**
-     * @param null $id Not used.
+     * @param null $id     Not used.
      * @param null $fields Not used.
+     *
      * @return Form
      */
     public function getEditForm($id = null, $fields = null)
     {
-
         $object = $this->getCurrentObject();
 
         $fields = $object->getCMSFields();
@@ -117,23 +118,17 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
             $validator = null;
         }
 
-        $form = Form::create(
-            $this,
-            'EditForm',
-            $fields,
-            $actions,
-            $validator
-        )->setHTMLID('Form_EditForm');
+        $form = Form::create($this, 'EditForm', $fields, $actions, $validator)->setHTMLID('Form_EditForm');
 
         $form->setValidationResponseCallback(function (ValidationResult $errors) use ($negotiator, $form) {
             $request = $this->getRequest();
             if ($request->isAjax() && $negotiator) {
                 $result = $form->forTemplate();
-                return $negotiator->respond($request, array(
+                return $negotiator->respond($request, [
                     'CurrentForm' => function () use ($result) {
                         return $result;
                     }
-                ));
+                ]);
             }
         });
 
@@ -169,7 +164,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
     /**
      * Used for preview controls, mainly links which switch between different states of the page.
      *
-     * @return ArrayData
+     * @return DBHTMLText|string
      */
     public function getSilverStripeNavigator()
     {
@@ -177,7 +172,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
     }
 
     /**
-     * @return mixed
+     * @return PjaxResponseNegotiator
      */
     public function getResponseNegotiator()
     {
@@ -190,13 +185,16 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
     }
 
     /**
-     * @param $data
-     * @param $form
+     * @param array $data
+     * @param Form  $form
+     *
      * @return mixed
      */
     public function doSave($data, $form)
     {
         $objectClass = $this->config()->get('tree_class');
+
+        /** @var DataObject|Versioned $object */
         $object = $objectClass::get()->byID($data['ID']);
 
         $currentStage = Versioned::get_stage();
@@ -214,14 +212,14 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
             $result = $e->getResult();
             $form->loadMessagesFrom($result);
 
-            $responseNegotiator = new PjaxResponseNegotiator(array(
+            $responseNegotiator = new PjaxResponseNegotiator([
                 'CurrentForm' => function () use (&$form) {
                     return $form->forTemplate();
                 },
-                'default' => function () use (&$controller) {
+                'default'     => function () use (&$controller) {
                     return $controller->redirectBack();
                 }
-            ));
+            ]);
             if ($controller->getRequest()->isAjax()) {
                 $controller->getRequest()->addHeader('X-Pjax', 'CurrentForm');
             }
@@ -236,14 +234,10 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
         }
 
         $link = '"' . $object->singular_name() . '"';
-        $message = _t(
-            'GridFieldDetailForm.Saved',
-            'Saved {name} {link}',
-            array(
-                'name' => $object->singular_name(),
-                'link' => $link
-            )
-        );
+        $message = _t('GridFieldDetailForm.Saved', 'Saved {name} {link}', [
+            'name' => $object->singular_name(),
+            'link' => $link
+        ]);
 
         $form->sessionMessage($message, 'good');
         $action = $this->edit(Controller::curr()->getRequest());
@@ -252,31 +246,32 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
     }
 
     /**
-     * @param $request
-     * @return mixed
+     * @param HTTPRequest $request
+     *
+     * @return DBHTMLText|string
      */
     public function edit($request)
     {
         $controller = Controller::curr();
         $form = $this->EditForm($request);
 
-        $return = $this->customise(array(
+        $return = $this->customise([
             'Backlink' => $controller->hasMethod('Backlink') ? $controller->Backlink() : $controller->Link(),
             'EditForm' => $form,
-        ))->renderWith(SingleObjectAdmin::class . '_Content');
+        ])->renderWith(SingleObjectAdmin::class . '_Content');
 
         if ($request->isAjax()) {
             return $return;
-        } else {
-            return $controller->customise(array(
-                'Content' => $return,
-            ));
         }
+
+        return $controller->customise([
+            'Content' => $return,
+        ]);
     }
 
     /**
-     * @param $data
-     * @param $form
+     * @param array $data
+     * @param Form $form
      */
     private function publish($data, $form)
     {
@@ -285,10 +280,11 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
 
         $objectClass = $this->config()->get('tree_class');
 
+        /** @var DataObject|Versioned $object */
         $object = $objectClass::get()->byID($data['ID']);
 
         if ($object) {
-            $object->doPublish();
+            $object->publishRecursive();
             $form->sessionMessage($object->singular_name() . ' has been saved.', 'good');
         } else {
             $form->sessionMessage('Something failed, please refresh your browser.', 'bad');
@@ -302,7 +298,9 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
      * Overridden to avoid the BadMethodCallException exception when a url_segment is undefined
      *
      * @param string $action
+     *
      * @return string
+     * @throws \BadMethodCallException
      */
     public function Link($action = null)
     {
@@ -313,16 +311,11 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
             // Get url_segment
             $segment = $this->config()->get('url_segment');
             if (!$segment) {
-                throw new BadMethodCallException("SingleObjectAdmin subclasses must have url_segment");
+                throw new \BadMethodCallException("SingleObjectAdmin subclasses must have url_segment");
             }
         }
 
-        $link = Controller::join_links(
-            AdminRootController::admin_url(),
-            $segment,
-            '/', // trailing slash needed if $action is null!
-            "$action"
-        );
+        $link = Controller::join_links(AdminRootController::admin_url(), $segment, '/', "$action");
         $this->extend('updateLink', $link);
         return $link;
     }

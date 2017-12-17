@@ -1,6 +1,6 @@
 {
     "name": "littlegiant/silverstripe-singleobjectadmin",
-    "type": "silverstripe-module",
+    "type": "silverstripe-vendormodule",
     "description": "Single object administration via a LeftAndMain like interface",
     "license": "MIT",
     "authors": [
@@ -18,5 +18,15 @@
     "require":
     {
         "silverstripe/framework": "^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "LittleGiant\\SingleObjectAdmin\\": "src/"
+        }
+    },
+    "extra": {
+        "expose": [
+            "dist/"
+        ]
     }
 }
