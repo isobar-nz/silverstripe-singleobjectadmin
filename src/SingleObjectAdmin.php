@@ -24,13 +24,29 @@ use SilverStripe\Security\PermissionProvider;
 /**
  * Defines the Single Object Administration interface for the CMS
  *
- * @package SingleObjectAdmin
- * @author  Jeremy Bridson with help from Stevie Mayhew
+ * @package LittleGiant\SingleObjectAdmin
+ * @author  Jeremy Bridson
+ * @author  Stevie Mayhew
  */
 class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
 {
+    /**
+     * @config
+     * @var string Used by {@link AdminRootController} to augment Director route rules for sub-classes of LeftAndMain
+     */
     private static $url_rule = '/$Action/$ID/$OtherID';
-    private static $menu_icon = 'resources/littlegiant/silverstripe-singleobjectadmin/dist/images/singleobjectadmin.png';
+
+    /**
+     * @config
+     * @var string
+     */
+    private static $menu_icon = 'littlegiant/silverstripe-singleobjectadmin:dist/images/singleobjectadmin.png';
+
+    /**
+     * @config
+     * @var string Used in the CMS breadcrumb, should be relative to your base url. If null, the back button will not be displayed.
+     */
+    private static $back_link = null;
 
     private static $allowed_actions = [
         'EditForm'
@@ -85,11 +101,21 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
      */
     public function getCMSActions()
     {
-        $actions = new FieldList(FormAction::create('doSave', 'Save')->addExtraClass('btn-primary font-ic1on-save'));
+        $actions = new FieldList(FormAction::create('doSave', 'Save')->addExtraClass('btn-primary font-icon-save'));
 
         $this->extend('updateCMSActions', $actions);
 
         return $actions;
+    }
+
+    /**
+     * Gets the "Go Back" link used in the Breadcrumb. If null the button will not be displayed
+     *
+     * @return string|null
+     */
+    public function getBreadcrumbsBackLink()
+    {
+        return $this->config()->get('back_link');
     }
 
     /**
@@ -195,7 +221,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
         $objectClass = $this->config()->get('tree_class');
 
         /** @var DataObject|Versioned $object */
-        $object = $objectClass::get()->byID($data['ID']);
+        $object = (isset($data['ID']) && is_numeric($data['ID']) && $data['ID'] > 0) ? $objectClass::get()->byID($data['ID']) : $objectClass::create();
 
         $currentStage = Versioned::get_stage();
         Versioned::set_stage('Stage');
@@ -271,7 +297,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
 
     /**
      * @param array $data
-     * @param Form $form
+     * @param Form  $form
      */
     private function publish($data, $form)
     {
@@ -305,7 +331,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
     public function Link($action = null)
     {
         // LeftAndMain methods have a top-level uri access
-        if (static::class === SingleObjectAdmin::class) {
+        if (static::class === SingleObjectAdmin::class || static::class === NewSingleObjectAdmin::class) {
             $segment = '';
         } else {
             // Get url_segment
