@@ -1,27 +1,28 @@
-<div id="settings-controller-cms-content" class="flexbox-area-grow fill-height cms-content cms-tabset $BaseCSSClasses" data-layout-type="border" data-pjax-fragment="Content" data-ignore-tab-state="true">
+<div id="pages-controller-cms-content" class="has-panel cms-content flexbox-area-grow fill-width fill-height cms-content cms-tabset $BaseCSSClasses" data-layout-type="border" data-pjax-fragment="Content" data-ignore-tab-state="true">
+    $Tools
 
-	<div class="cms-content-header north">
-        <% with $EditForm %>
-			<div class="cms-content-header-info">
-                <% with $Controller %>
-                    <% include SilverStripe\\Admin\\CMSBreadcrumbs %>
-                <% end_with %>
-			</div>
+    <div class="fill-height flexbox-area-grow">
+        <div class="cms-content-header north">
+            <div class="cms-content-header-info flexbox-area-grow vertical-align-items fill-width">
+                <% if $BreadcrumbsBackLink %><a href="$BreadcrumbsBackLink" class="btn btn-secondary btn--no-text font-icon-left-open-big hidden-lg-up toolbar__back-button"></a><% end_if %>
+                <% include SilverStripe\\Admin\\CMSBreadcrumbs %>
+            </div>
 
-            <% if $Fields.hasTabset %>
-                <% with $Fields.fieldByName('Root') %>
-					<div class="cms-content-header-tabs cms-tabset-nav-primary ss-ui-tabs-nav">
-						<ul class="cms-tabset-nav-primary">
+            <% if $EditForm.Fields.hasTabset %>
+                <% with $EditForm.Fields.fieldByName('Root') %>
+                    <div class="cms-content-header-tabs cms-tabset">
+                        <ul class="cms-tabset-nav-primary nav nav-tabs">
                             <% loop $Tabs %>
-								<li<% if $extraClass %> class="$extraClass"<% end_if %>><a href="#$id">$Title</a></li>
+                                <li class="nav-item<% if $extraClass %> $extraClass<% end_if %>"><a href="#$id">$Title</a></li>
                             <% end_loop %>
-						</ul>
-					</div>
+                        </ul>
+                    </div>
                 <% end_with %>
             <% end_if %>
-        <% end_with %>
-	</div>
+        </div>
 
-    $EditForm
-
+        <div class="flexbox-area-grow fill-height">
+            $EditForm
+        </div>
+    </div>
 </div>
