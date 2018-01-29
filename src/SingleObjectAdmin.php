@@ -35,6 +35,12 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
     private static $allowed_actions = [
         'EditForm'
     ];
+    
+    /**
+     * @config
+     * @var array Allows developers to create adaptations to this plugin by giving a class name top-level uri access
+     */
+    private static $plugins = [];
 
     public function canView($member = null)
     {
@@ -304,8 +310,13 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
      */
     public function Link($action = null)
     {
+        $allowedPlugins = $this->config()->get('plugins');
+        $allowedPlugins[] = SingleObjectAdmin::class;
+        
+        $this->extend('updateAllowedPlugins', $allowedPlugins);
+
         // LeftAndMain methods have a top-level uri access
-        if (static::class === SingleObjectAdmin::class) {
+        if (in_array(static::class, $allowedPlugins)) {
             $segment = '';
         } else {
             // Get url_segment
@@ -319,5 +330,4 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
         $this->extend('updateLink', $link);
         return $link;
     }
-
 }
