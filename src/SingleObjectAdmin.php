@@ -30,12 +30,12 @@ use SilverStripe\Security\PermissionProvider;
 class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
 {
     private static $url_rule = '/$Action/$ID/$OtherID';
-    private static $menu_icon = 'resources/vendor/littlegiant/silverstripe-singleobjectadmin/dist/images/singleobjectadmin.png';
+    private static $menu_icon = 'littlegiant/silverstripe-singleobjectadmin:dist/images/singleobjectadmin.png';
 
     private static $allowed_actions = [
         'EditForm'
     ];
-    
+
     /**
      * @config
      * @var array Allows developers to create adaptations to this plugin by giving a class name top-level uri access
@@ -312,7 +312,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
     {
         $allowedPlugins = $this->config()->get('plugins');
         $allowedPlugins[] = SingleObjectAdmin::class;
-        
+
         $this->extend('updateAllowedPlugins', $allowedPlugins);
 
         // LeftAndMain methods have a top-level uri access
