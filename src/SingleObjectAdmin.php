@@ -35,7 +35,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
     private static $allowed_actions = [
         'EditForm'
     ];
-    
+
     /**
      * @config
      * @var array Allows developers to create adaptations to this plugin by giving a class name top-level uri access
@@ -91,7 +91,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
      */
     public function getCMSActions()
     {
-        $actions = new FieldList(FormAction::create('doSave', 'Save')->addExtraClass('btn-primary font-ic1on-save'));
+        $actions = new FieldList(FormAction::create('doSave', 'Save')->addExtraClass('btn-primary font-icon-save'));
 
         $this->extend('updateCMSActions', $actions);
 
@@ -312,7 +312,7 @@ class SingleObjectAdmin extends LeftAndMain implements PermissionProvider
     {
         $allowedPlugins = $this->config()->get('plugins');
         $allowedPlugins[] = SingleObjectAdmin::class;
-        
+
         $this->extend('updateAllowedPlugins', $allowedPlugins);
 
         // LeftAndMain methods have a top-level uri access
